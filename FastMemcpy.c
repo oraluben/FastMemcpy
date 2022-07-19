@@ -11,6 +11,22 @@
 #include <string.h>
 #include <time.h>
 
+
+#ifndef SRC_ALIGNED
+#define SRC_ALIGNED 1
+#endif
+#ifndef DST_ALIGNED
+#define DST_ALIGNED 1
+#endif
+
+#ifndef BATCH
+#define BATCH 1024
+#endif
+
+#ifndef TIMES
+#define TIMES 0x10000000 / BATCH * 64
+#endif
+
 #if (defined(_WIN32) || defined(WIN32))
 #include <windows.h>
 #include <mmsystem.h>
@@ -31,6 +47,17 @@
 #else
   #define memcpy_fast memcpy
 #endif
+
+
+#define FETCH(dst, n)                          \
+    do                                         \
+    {                                          \
+        for (size_t __i = 0; __i < (n); __i++) \
+        {                                      \
+            (dst)[__i] += 0;                   \
+        }                                      \
+    } while (0)
+
 
 unsigned int gettime()
 {
@@ -64,38 +91,31 @@ void benchmark(int dstalign, int srcalign, size_t size, int times)
 	char *ALIGN2 = (char*)(((64 - (LINEAR2 & 63)) & 63) + LINEAR2);
 	char *dst = (dstalign)? ALIGN1 : (ALIGN1 + 1);
 	char *src = (srcalign)? ALIGN2 : (ALIGN2 + 3);
-	unsigned int t1, t2;
+	unsigned int t1;
 	int k;
 	
 	sleepms(100);
 	t1 = gettime();
 	for (k = times; k > 0; k--) {
-		memcpy(dst, src, size);
-	}
-	t1 = gettime() - t1;
-	sleepms(100);
-	t2 = gettime();
-	for (k = times; k > 0; k--) {
 		memcpy_fast(dst, src, size);
 	}
-	t2 = gettime() - t2;
+	t1 = gettime() - t1;
+
+	FETCH(dst, size);
 
 	free(DATA1);
 	free(DATA2);
 
-	printf("result(dst %s, src %s): memcpy_fast=%dms memcpy=%d ms\n",  
+	printf("dst %s, src %s, %dms\n",  
 		dstalign? "aligned" : "unalign", 
-		srcalign? "aligned" : "unalign", (int)t2, (int)t1);
+		srcalign? "aligned" : "unalign", (int)t1);
 }
 
 
 void bench(int copysize, int times)
 {
 	printf("benchmark(size=%d bytes, times=%d):\n", copysize, times);
-	benchmark(1, 1, copysize, times);
-	benchmark(1, 0, copysize, times);
-	benchmark(0, 1, copysize, times);
-	benchmark(0, 0, copysize, times);
+	benchmark(DST_ALIGNED, SRC_ALIGNED, copysize, times);
 	printf("\n");
 }
 
@@ -107,7 +127,7 @@ void random_bench(int maxsize, int times)
 	static int random_offsets[0x10000];
 	static int random_sizes[0x8000];
 	unsigned int i, p1, p2;
-	unsigned int t1, t2;
+	unsigned int t1;
 	for (i = 0; i < 0x10000; i++) {	// generate random offsets
 		random_offsets[i] = rand() % (10 * 1024 * 1024 + 1);
 	}
@@ -120,20 +140,11 @@ void random_bench(int maxsize, int times)
 		int offset1 = random_offsets[(p1++) & 0xffff];
 		int offset2 = random_offsets[(p1++) & 0xffff];
 		int size = random_sizes[(p2++) & 0x7fff];
-		memcpy(A + offset1, B + offset2, size);
-	}
-	t1 = gettime() - t1;
-	sleepms(100);
-	t2 = gettime();
-	for (p1 = 0, p2 = 0, i = 0; i < times; i++) {
-		int offset1 = random_offsets[(p1++) & 0xffff];
-		int offset2 = random_offsets[(p1++) & 0xffff];
-		int size = random_sizes[(p2++) & 0x7fff];
 		memcpy_fast(A + offset1, B + offset2, size);
 	}
-	t2 = gettime() - t2;
+	t1 = gettime() - t1;
 	printf("benchmark random access:\n");
-	printf("memcpy_fast=%dms memcpy=%dms\n\n", (int)t2, (int)t1);
+	printf("%d", (int)t1);
 }
 
 
@@ -143,17 +154,9 @@ void random_bench(int maxsize, int times)
 
 int main(void)
 {
-	bench(32, 0x1000000);
-	bench(64, 0x1000000);
-	bench(512, 0x800000);
-	bench(1024, 0x400000);
-	bench(4096, 0x80000);
-	bench(8192, 0x40000);
-	bench(1024 * 1024 * 1, 0x800);
-	bench(1024 * 1024 * 4, 0x200);
-	bench(1024 * 1024 * 8, 0x100);
-	
-	random_bench(2048, 8000000);
+	bench(BATCH, TIMES);
+
+	// random_bench(2048, 8000000);
 
 	return 0;
 }

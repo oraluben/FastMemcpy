@@ -14,38 +14,15 @@
 #include <immintrin.h>
 
 
-//---------------------------------------------------------------------
-// force inline for compilers
-//---------------------------------------------------------------------
-#ifndef INLINE
-#ifdef __GNUC__
-#if (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 1))
-    #define INLINE         __inline__ __attribute__((always_inline))
-#else
-    #define INLINE         __inline__
-#endif
-#elif defined(_MSC_VER)
-	#define INLINE __forceinline
-#elif (defined(__BORLANDC__) || defined(__WATCOMC__))
-    #define INLINE __inline
-#else
-    #define INLINE 
-#endif
-#endif
-
+#include "FastMemcpy_Base.h"
 
 
 //---------------------------------------------------------------------
 // fast copy for different sizes
 //---------------------------------------------------------------------
 static INLINE void memcpy_avx_16(void *dst, const void *src) {
-#if 1
 	__m128i m0 = _mm_loadu_si128(((const __m128i*)src) + 0);
 	_mm_storeu_si128(((__m128i*)dst) + 0, m0);
-#else
-	*((uint64_t*)((char*)dst + 0)) = *((uint64_t*)((const char*)src + 0));
-	*((uint64_t*)((char*)dst + 8)) = *((uint64_t*)((const char*)src + 8));
-#endif
 }
 
 static INLINE void memcpy_avx_32(void *dst, const void *src) {
