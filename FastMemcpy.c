@@ -33,7 +33,7 @@
 #ifdef _MSC_VER
 #pragma comment(lib, "winmm.lib")
 #endif
-#elif defined(__unix)
+#elif defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 #include <sys/time.h>
 #include <unistd.h>
 #else
