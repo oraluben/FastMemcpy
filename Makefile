@@ -9,3 +9,7 @@ sse2:
 avx:
 	gcc $(CFLAGS) -O3 -mavx -DHAS_AVX FastMemcpy.c -o out/FastMemcpy_Avx
 	./out/FastMemcpy_Avx
+
+neon:
+	gcc $(CFLAGS) -O3 -DHAS_NEON FastMemcpy.c -o out/FastMemcpy_Neon
+	./out/FastMemcpy_Neon
